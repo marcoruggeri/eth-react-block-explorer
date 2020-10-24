@@ -1,24 +1,60 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect, useCallback } from "react";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { ethers } from "ethers";
+import "./App.css";
+
+import Home from "./pages/Home";
+import Block from "./pages/Block";
+import Transactions from "./pages/Transactions";
+import Account from "./pages/Account";
+
+const network = localStorage.getItem("network");
 
 function App() {
+  const [blocks, setBlocks] = useState([]);
+  const provider = new ethers.providers.InfuraProvider(
+    network,
+    process.env.REACT_APP_INFURA
+  );
+
+  const fetchBlock = useCallback(() => {
+    provider
+      .getBlock("latest")
+      .then((response) => {
+        if (blocks.length === 0) {
+          setBlocks([...blocks, response]);
+        } else if (
+          blocks.filter((e) => e.number === response.number).length === 0
+        ) {
+          setBlocks([...blocks, response]);
+        } else {
+          setTimeout(() => fetchBlock(), 4000);
+        }
+      })
+      .catch((error) => console.log(error));
+  }, [blocks, provider]);
+
+  useEffect(() => {
+    setTimeout(() => fetchBlock(), 4000);
+  }, [fetchBlock]);
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Router>
+        <Switch>
+          <Route path="/" exact>
+            <Home provider={provider} blocks={blocks} />
+          </Route>
+          <Route path="/block/:number" exact>
+            <Block provider={provider} />
+          </Route>
+          <Route path="/transaction/:tx" exact>
+            <Transactions provider={provider} />
+          </Route>
+          <Route path="/account/:address" exact>
+            <Account provider={provider} />
+          </Route>
+        </Switch>
+      </Router>
     </div>
   );
 }
